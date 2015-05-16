@@ -23,8 +23,9 @@ end integration;
 system implementation integration.generic
 subcomponents
 -- input devices
-	obstacle_camera : device speed_regulation::devices::camera;
-	obstacle_radar : device speed_regulation::devices::radar;
+	driver_camera : device speed_regulation::devices::driver_camera;
+	pedestrian_camera : device speed_regulation::devices::pedestrian_camera;
+--	obstacle_radar : device speed_regulation::devices::radar;
 	wheel_sensor : device speed_regulation::devices::speed_wheel_sensor;
 	laser_sensor : device speed_regulation::devices::speed_laser_sensor;
 	gps1 : device speed_regulation::devices::gps.impl1;
@@ -56,10 +57,10 @@ subcomponents
 	acceleration  : device speed_regulation::devices::acceleration;
 connections
 -- obstacle camera to image acquisition
-   c000 : port obstacle_camera.picture -> image_acquisition.picture;
+   c000 : port driver_camera.picture -> image_acquisition.picture;
 
 -- obstacle radar to radar acquisition
-   c010 : port obstacle_radar.distance_estimate -> radar_acquisition.obstacle_distance; 
+--   c010 : port obstacle_radar.distance_estimate -> radar_acquisition.obstacle_distance; 
 
 -- speed wheel sensor to speed estimate
    c020 : port wheel_sensor.speed -> speed_estimate.wheel_sensor;
@@ -123,7 +124,7 @@ connections
 	c210 : port speed_controller.cmd -> acceleration.cmd;
 flows
     --  From the camera to the warning device
-	f0 : end to end flow 	obstacle_camera.f0 -> c000 ->
+	f0 : end to end flow 	driver_camera.f0 -> c000 ->
 							image_acquisition.f0 -> c060 ->
 							obstacle_detection.f0 -> c080 ->
 							obstacle_distance_evaluation.f1 -> c090 ->
@@ -131,7 +132,7 @@ flows
 							warning_activation.f0 -> c110 ->
 							warning_alert.f0 {Latency => 700ms .. 900 ms;};	
     --  From the camera to the brake
-	f1 : end to end flow 	obstacle_camera.f0 -> c000 ->
+	f1 : end to end flow 	driver_camera.f0 -> c000 ->
 							image_acquisition.f0 -> c060 ->
 							obstacle_detection.f0 -> c080 ->
 							obstacle_distance_evaluation.f1 -> c090 ->
@@ -139,7 +140,7 @@ flows
 							speed_controller.f3 -> c200 ->
 							brake.f0;	
     --  From the camera to the acceleration
-	f2 : end to end flow 	obstacle_camera.f0 -> c000 ->
+	f2 : end to end flow 	driver_camera.f0 -> c000 ->
 							image_acquisition.f0 -> c060 ->
 							obstacle_detection.f0 -> c080 ->
 							obstacle_distance_evaluation.f1 -> c090 ->

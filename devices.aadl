@@ -280,42 +280,42 @@ annex EMV2 {**
 **};
 end gps.impl1;
 
-device implementation gps.impl2
-properties
-	Period => 9ms;
-annex EMV2 {**
-	use types speed_regulation::error_library;
-
-	error propagations
-		position : out propagation {NoValue,InvalidValue};
-	flows
-		ef0 : error source position{noValue};
-		ef1 : error source position{invalidValue};
-	end propagations;
-
-	properties
-		emv2::severity => ARP4761::Major applies to position;
-		emv2::likelihood => ARP4761::Probable applies to position;
-		emv2::hazards => 
-			([	crossreference => "N/A";
-				failure => "Novalue";
-				phases => ("all");
-				description => "No value from the gps from vendor2";
-				comment => "No value from the GPS, may then be an issue if the voter has no position from all gps";
-			])
-			applies to position.novalue;
-		emv2::hazards => 
-			([	crossreference => "N/A";
-				failure => "InvalidValue";
-				phases => ("all");
-				description => "Invalid value from the gps from vendor2";
-				comment => "Invalid value from the GPS that can then trigger issue in the position voter";
-			])
-			applies to position.invalidvalue;
-			
-		emv2::OccurrenceDistribution => [ ProbabilityValue => 3.4e-5 ; Distribution => Fixed;] applies to position.invalidvalue;	
-**};
-end gps.impl2;
+--device implementation gps.impl2
+--properties
+--	Period => 9ms;
+--annex EMV2 {**
+--	use types speed_regulation::error_library;
+--
+--	error propagations
+--		position : out propagation {NoValue,InvalidValue};
+--	flows
+--		ef0 : error source position{noValue};
+--		ef1 : error source position{invalidValue};
+--	end propagations;
+--
+--	properties
+--		emv2::severity => ARP4761::Major applies to position;
+--		emv2::likelihood => ARP4761::Probable applies to position;
+--		emv2::hazards => 
+--			([	crossreference => "N/A";
+--				failure => "Novalue";
+--				phases => ("all");
+--				description => "No value from the gps from vendor2";
+--				comment => "No value from the GPS, may then be an issue if the voter has no position from all gps";
+--			])
+--			applies to position.novalue;
+--		emv2::hazards => 
+--			([	crossreference => "N/A";
+--				failure => "InvalidValue";
+--				phases => ("all");
+--				description => "Invalid value from the gps from vendor2";
+--				comment => "Invalid value from the GPS that can then trigger issue in the position voter";
+--			])
+--			applies to position.invalidvalue;
+--			
+--		emv2::OccurrenceDistribution => [ ProbabilityValue => 3.4e-5 ; Distribution => Fixed;] applies to position.invalidvalue;	
+--**};
+--end gps.impl2;
 
 ----------------------
 --  Warning Device  --
@@ -350,6 +350,57 @@ annex EMV2 {**
 	end component;
 **};
 end warning_device;
+
+------------------------------------
+--  Wireless Sensor Network Module  --
+------------------------------------
+device wsn_sensor
+features
+    position : out data port speed_regulation::icd::gps_position;
+flows
+    f0 : flow source position;
+annex EMV2 {**
+    use types speed_regulation::error_library;
+
+    error propagations
+        position : out propagation {NoValue,InvalidValue};
+    flows
+        ef0 : error source position{NoValue,InvalidValue};
+    end propagations;
+
+    properties
+        emv2::severity => ARP4761::Major applies to position;
+        emv2::likelihood => ARP4761::Probable applies to position;          
+        emv2::OccurrenceDistribution => [ ProbabilityValue => 3.4e-5 ; Distribution => Fixed;] applies to position.invalidvalue;
+            
+**};
+end wsn_sensor;
+
+
+-----------------------------------------
+--  Wireless Sensor Network Transmission --
+----------------------------------------
+device wsn_transmission
+features
+    position : out data port speed_regulation::icd::gps_position;
+flows
+    f0 : flow source position;
+annex EMV2 {**
+    use types speed_regulation::error_library;
+
+    error propagations
+        position : out propagation {NoValue,InvalidValue};
+    flows
+        ef0 : error source position{NoValue,InvalidValue};
+    end propagations;
+
+    properties
+        emv2::severity => ARP4761::Major applies to position;
+        emv2::likelihood => ARP4761::Probable applies to position;          
+        emv2::OccurrenceDistribution => [ ProbabilityValue => 3.4e-5 ; Distribution => Fixed;] applies to position.invalidvalue;
+            
+**};
+end wsn_transmission;
 
 -------------
 --  Brake  --

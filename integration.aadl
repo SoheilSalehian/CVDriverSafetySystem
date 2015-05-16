@@ -30,10 +30,11 @@ subcomponents
 	laser_sensor : device speed_regulation::devices::speed_laser_sensor;
 	gps1 : device speed_regulation::devices::gps.impl1;
 --	gps2 : device speed_regulation::devices::gps.impl2;
+    wsn_sensor : device speed_regulation::devices::wsn_sensor; 
 	
 -- software
     image_acquisition : process speed_regulation::software::image_acquisition.i;
-    radar_acquisition : process speed_regulation::software::radar_acquisition.i;
+--    radar_acquisition : process speed_regulation::software::radar_acquisition.i;
     
     speed_estimate    : process speed_regulation::software::speed_estimate.i;
     
@@ -78,7 +79,7 @@ connections
    c060 : port image_acquisition.obstacle_detected -> obstacle_detection.camera; 
 
 -- Radar acquisition to obstacle detection
-   c070 : port radar_acquisition.obstacle_detected -> obstacle_detection.radar;
+--   c070 : port radar_acquisition.obstacle_detected -> obstacle_detection.radar;
 
 -- obstacle detection to obstacle distance evaluation
    c080 : port obstacle_detection.obstacle_detected -> obstacle_distance_evaluation.obstacle_detected;
@@ -290,7 +291,7 @@ connections
 	b1 : bus access ecu2.socket <-> can;
 properties
 	Actual_Connection_Binding => (reference (can)) applies to c080, c120, c130, c140, c150, c180, c190;
-	Actual_Processor_Binding => (reference (ecu1)) applies to image_acquisition, radar_acquisition, speed_estimate, position_voter, obstacle_detection;
+	Actual_Processor_Binding => (reference (ecu1)) applies to image_acquisition, speed_estimate, position_voter, obstacle_detection;
 	Actual_Processor_Binding => (reference (ecu2)) applies to obstacle_distance_evaluation, speed_threshold_calculation, speed_controller, emergency_detection, warning_activation;
 end integration.implementation1;
 
@@ -310,7 +311,7 @@ connections
 properties
 	Actual_Connection_Binding => (reference (bus1)) applies to c080, c120, c130, c140, c150;
 	Actual_Connection_Binding => (reference (bus2)) applies to c180, c190;
-	Actual_Processor_Binding => (reference (ecu1)) applies to image_acquisition, radar_acquisition, speed_estimate, obstacle_detection;
+	Actual_Processor_Binding => (reference (ecu1)) applies to image_acquisition, speed_estimate, obstacle_detection;
 	Actual_Processor_Binding => (reference (ecu2)) applies to position_voter;
 	Actual_Processor_Binding => (reference (ecu3)) applies to obstacle_distance_evaluation, speed_threshold_calculation, speed_controller, emergency_detection, warning_activation;
 end integration.implementation2;

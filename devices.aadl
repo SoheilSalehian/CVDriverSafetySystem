@@ -376,15 +376,81 @@ annex EMV2 {**
 **};
 end wsn_sensor;
 
-
------------------------------------------
---  Wireless Sensor Network Transmission --
-----------------------------------------
-device wsn_transmission
+---------------------
+--  Logger Module  --
+---------------------
+device logger
 features
     position : out data port speed_regulation::icd::gps_position;
 flows
     f0 : flow source position;
+annex EMV2 {**
+    use types speed_regulation::error_library;
+
+    error propagations
+        position : out propagation {NoValue,InvalidValue};
+    flows
+        ef0 : error source position{NoValue,InvalidValue};
+    end propagations;
+
+    properties
+        emv2::severity => ARP4761::Major applies to position;
+        emv2::likelihood => ARP4761::Probable applies to position;          
+        emv2::OccurrenceDistribution => [ ProbabilityValue => 3.4e-5 ; Distribution => Fixed;] applies to position.invalidvalue;
+            
+**};
+end logger;
+
+-----------------------------------------
+--  General Purpose Network Transmission --
+-----------------------------------------
+device network_transmission
+features
+    position : out data port speed_regulation::icd::gps_position;
+flows
+    f0 : flow source position;
+annex EMV2 {**
+    use types speed_regulation::error_library;
+
+    error propagations
+        position : out propagation {NoValue,InvalidValue};
+    flows
+        ef0 : error source position{NoValue,InvalidValue};
+    end propagations;
+
+    properties
+        emv2::severity => ARP4761::Major applies to position;
+        emv2::likelihood => ARP4761::Probable applies to position;          
+        emv2::OccurrenceDistribution => [ ProbabilityValue => 3.4e-5 ; Distribution => Fixed;] applies to position.invalidvalue;
+            
+**};
+end network_transmission;
+
+--------------------------
+--  logger Transmission --
+--------------------------
+device logger_transmission extends network_transmission
+annex EMV2 {**
+    use types speed_regulation::error_library;
+
+    error propagations
+        position : out propagation {NoValue,InvalidValue};
+    flows
+        ef0 : error source position{NoValue,InvalidValue};
+    end propagations;
+
+    properties
+        emv2::severity => ARP4761::Major applies to position;
+        emv2::likelihood => ARP4761::Probable applies to position;          
+        emv2::OccurrenceDistribution => [ ProbabilityValue => 3.4e-5 ; Distribution => Fixed;] applies to position.invalidvalue;
+            
+**};
+end logger_transmission;
+
+--------------------------
+--  WSN Transmission --
+--------------------------
+device wsn_transmission extends network_transmission
 annex EMV2 {**
     use types speed_regulation::error_library;
 

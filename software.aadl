@@ -430,10 +430,13 @@ features
 	position  : out data port speed_regulation::icd::gps_position;
 	blink_rate_per_minute : in data port speed_regulation::icd::blink_rate_per_minute;
 	blink_rate_logged : out data port speed_regulation::icd::blink_rate_per_minute;
+	total_proximate_pedestrians : in data port speed_regulation::icd::total_proximate_pedestrians;
+	total_pedestrians_logged : out data port speed_regulation::icd::total_proximate_pedestrians;
 flows
 	f0 : flow path position1 -> position;
 	f1 : flow path position2 -> position;
 	f2 : flow path blink_rate_per_minute -> blink_rate_logged;
+	f3 : flow path total_proximate_pedestrians -> total_pedestrians_logged;
 annex EMV2 {**
 	use types 		speed_regulation::error_library;
 	use behavior  	speed_regulation::error_library::simple;
@@ -444,6 +447,8 @@ annex EMV2 {**
 		position : out propagation {NoValue,InvalidValue};
 		blink_rate_per_minute : in propagation {NoValue,InvalidValue};
 		blink_rate_logged : out propagation {NoValue,InvalidValue};
+		total_proximate_pedestrians : in propagation {NoValue,InvalidValue};
+        total_pedestrians_logged : out propagation {NoValue,InvalidValue};
 		processor : in propagation {SoftwareFailure, HardwareFailure};
 	flows
 		ef00 : error path position1{novalue} -> position{novalue};
@@ -453,6 +458,8 @@ annex EMV2 {**
 		ef4 : error path processor{HardwareFailure,SoftwareFailure} -> position{NoValue};
 		ef5 : error path blink_rate_per_minute{novalue} -> blink_rate_logged{novalue};
 		ef6 : error path blink_rate_per_minute{invalidvalue} -> blink_rate_logged{invalidvalue};
+		ef7 : error path total_proximate_pedestrians{novalue} -> total_pedestrians_logged{novalue};
+        ef8 : error path total_proximate_pedestrians{invalidvalue} -> total_pedestrians_logged{invalidvalue};
 	end propagations;
 
 	component error behavior

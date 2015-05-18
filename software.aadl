@@ -103,9 +103,12 @@ features
 	wheel_sensor : in data port speed_regulation::icd::speed;
 	laser_sensor : in data port speed_regulation::icd::speed;
 	speed        : out data port speed_regulation::icd::speed;
+	vehicle_moving : out data port speed_regulation::icd::boolean;
 flows
 	f0 : flow path wheel_sensor -> speed;
 	f1 : flow path laser_sensor -> speed;
+	f3 : flow path wheel_sensor -> vehicle_moving;
+	f4 : flow path laser_sensor -> vehicle_moving;
 annex EMV2 {**
 	use types 		speed_regulation::error_library;
 	use behavior  	speed_regulation::error_library::simple;
@@ -238,23 +241,26 @@ process pedestrian_detection
 features
     camera : in data port speed_regulation::icd::boolean;
     pedestrian_detected : out data port speed_regulation::icd::boolean;
+    total_proximate_pedestrians : out data port speed_regulation::icd::total_proximate_pedestrians;
 flows
     f0 : flow path camera -> pedestrian_detected;
+    f1 : flow path camera -> total_proximate_pedestrians;
 annex EMV2 {**
     use types       speed_regulation::error_library;
     use behavior    speed_regulation::error_library::simple;
 
     error propagations
         camera : in propagation {NoValue,InvalidValue};
---      radar : in propagation {NoValue,InvalidValue};
         pedestrian_detected : out propagation {NoValue,InvalidValue};
+        total_proximate_pedestrians : out propagation {NoValue,InvalidValue};
         processor : in propagation {SoftwareFailure, HardwareFailure};
     flows
         ef0 : error path camera{NoValue} -> pedestrian_detected{NoValue};
-        ef1 : error path camera{NoValue} -> pedestrian_detected{InvalidValue};
-        ef2 : error path processor{HardwareFailure} -> pedestrian_detected{NoValue};
-        ef3 : error path camera{InvalidValue} -> pedestrian_detected{InvalidValue};
-        ef4 : error path processor{SoftwareFailure} -> pedestrian_detected{NoValue};
+        ef1 : error path camera{InvalidValue} -> pedestrian_detected{InvalidValue};
+        ef2 : error path camera{NoValue} -> total_proximate_pedestrians{NoValue};
+        ef3 : error path camera{InvalidValue} -> total_proximate_pedestrians{InvalidValue};
+        ef4 : error path processor{HardwareFailure} -> pedestrian_detected{NoValue};
+        ef5 : error path processor{SoftwareFailure} -> pedestrian_detected{NoValue};
 
     end propagations;
 
@@ -301,28 +307,30 @@ end pedestrian_detection_thr;
 process emergency_detection
 features
 	current_speed : in data port speed_regulation::icd::speed;
-	obstacle_distance : in data port speed_regulation::icd::distance;
+	vehicle_moving : in data port speed_regulation::icd::boolean;
+	proximate_pedestrian : in data port speed_regulation::icd::boolean;
 	emergency_detected : out data port speed_regulation::icd::boolean;
 flows
 	f0 : flow path current_speed -> emergency_detected;
-	f1 : flow path obstacle_distance -> emergency_detected;
+	f1 : flow path proximate_pedestrian -> emergency_detected;
+	f2 : flow path vehicle_moving -> emergency_detected;
 annex EMV2 {**
 	use types 		speed_regulation::error_library;
 	use behavior  	speed_regulation::error_library::simple;
 
 	error propagations
 		current_speed : in propagation {NoValue,InvalidValue};
-		obstacle_distance : in propagation {NoValue,InvalidValue};
+		proximate_pedestrian : in propagation {NoValue,InvalidValue};
 		emergency_detected : out propagation {NoValue,InvalidValue};
 		processor : in propagation {SoftwareFailure, HardwareFailure};
 	flows
 		ef0 : error path current_speed{NoValue} -> emergency_detected{NoValue};
-		ef1 : error path obstacle_distance{NoValue} -> emergency_detected{NoValue};
+		ef1 : error path proximate_pedestrian{NoValue} -> emergency_detected{NoValue};
 		ef2 : error path current_speed{NoValue} -> emergency_detected{InvalidValue};
-		ef3 : error path obstacle_distance{NoValue} -> emergency_detected{InvalidValue};
+		ef3 : error path proximate_pedestrian{NoValue} -> emergency_detected{InvalidValue};
 		ef4 : error path processor{HardwareFailure,SoftwareFailure} -> emergency_detected{NoValue};
 		ef5 : error path current_speed{InvalidValue} -> emergency_detected{InvalidValue};
-		ef6 : error path obstacle_distance{InvalidValue} -> emergency_detected{InvalidValue};
+		ef6 : error path proximate_pedestrian{InvalidValue} -> emergency_detected{InvalidValue};
 	end propagations;
 
 	component error behavior
@@ -341,21 +349,21 @@ subcomponents
 	thr : thread emergency_detection_thr;
 connections
 	c0 : port current_speed -> thr.current_speed;
-	c1 : port obstacle_distance -> thr.obstacle_distance;
+	c1 : port proximate_pedestrian -> thr.proximate_pedestrian;
 	c2 : port thr.emergency_detected -> emergency_detected;
 flows 
 	f0 : flow path current_speed -> c0 -> thr.f0 -> c2 -> emergency_detected;
-	f1 : flow path obstacle_distance -> c1 -> thr.f1 -> c2 -> emergency_detected;
+	f1 : flow path proximate_pedestrian -> c1 -> thr.f1 -> c2 -> emergency_detected;
 end emergency_detection.i;
 
 thread emergency_detection_thr
 features
 	current_speed : in data port speed_regulation::icd::speed;
-	obstacle_distance : in data port speed_regulation::icd::distance;
+	proximate_pedestrian : in data port speed_regulation::icd::distance;
 	emergency_detected : out data port speed_regulation::icd::boolean;
 flows
 	f0 : flow path current_speed -> emergency_detected;
-	f1 : flow path obstacle_distance -> emergency_detected;
+	f1 : flow path proximate_pedestrian -> emergency_detected;
 properties
 	Dispatch_Protocol => Periodic;
 	Period            => 4ms;

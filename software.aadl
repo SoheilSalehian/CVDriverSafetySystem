@@ -25,27 +25,27 @@ with speed_regulation::platform;
 process image_acquisition
 features
 	picture           : in data port speed_regulation::icd::picture;
-	fatigue_detected : out data port speed_regulation::icd::boolean;
-	pedestrian_detected : out data port speed_regulation::icd::boolean;
+	fatigue_detected_image : out data port speed_regulation::icd::boolean;
+	pedestrian_detected_image : out data port speed_regulation::icd::boolean;
 flows
-	f0 : flow path picture -> fatigue_detected;
-	f1 : flow path picture -> pedestrian_detected;
+	f0 : flow path picture -> fatigue_detected_image;
+	f1 : flow path picture -> pedestrian_detected_image;
 annex EMV2 {**
 	use types 		speed_regulation::error_library;
 	use behavior  	speed_regulation::error_library::simple;
 
 	error propagations
 		picture : in propagation {NoValue};
-		fatigue_detected : out propagation {NoValue,InvalidValue};
-		pedestrian_detected : out propagation {NoValue,InvalidValue};
+		fatigue_detected_image : out propagation {NoValue,InvalidValue};
+		pedestrian_detected_image : out propagation {NoValue,InvalidValue};
 		processor : in propagation {SoftwareFailure, HardwareFailure};
 	flows
-		ef0 : error path picture{NoValue} -> fatigue_detected{NoValue};
-		ef1 : error path picture{NoValue} -> fatigue_detected{InvalidValue};
-		ef2 : error path picture{NoValue} -> pedestrian_detected{NoValue};
-        ef3 : error path picture{NoValue} -> pedestrian_detected{InvalidValue};
-		ef4 : error path processor{HardwareFailure,SoftwareFailure} -> fatigue_detected{NoValue};
-		ef5 : error path processor{HardwareFailure,SoftwareFailure} -> pedestrian_detected{NoValue};
+		ef0 : error path picture{NoValue} -> fatigue_detected_image{NoValue};
+		ef1 : error path picture{NoValue} -> fatigue_detected_image{InvalidValue};
+		ef2 : error path picture{NoValue} -> pedestrian_detected_image{NoValue};
+        ef3 : error path picture{NoValue} -> pedestrian_detected_image{InvalidValue};
+		ef4 : error path processor{HardwareFailure,SoftwareFailure} -> fatigue_detected_image{NoValue};
+		ef5 : error path processor{HardwareFailure,SoftwareFailure} -> pedestrian_detected_image{NoValue};
 	end propagations;
 
 	component error behavior
@@ -54,8 +54,8 @@ annex EMV2 {**
 		t1 : Operational -[processor{HardwareFailure}]-> Failed;
 		t2 : Failed -[processor{NoError}]-> Operational;
 	propagations
-	   	p1 : Failed -[]-> fatigue_detected{NoValue};
-	   	p2 : Failed -[]-> pedestrian_detected{NoValue};
+	   	p1 : Failed -[]-> fatigue_detected_image{NoValue};
+	   	p2 : Failed -[]-> pedestrian_detected_image{NoValue};
 	end component;
 **};
 end image_acquisition;
@@ -65,11 +65,11 @@ subcomponents
 	thr_acq : thread image_acquisition_thr.i;
 connections
 	c0 : port picture -> thr_acq.picture;
-	c1 : port thr_acq.fatigue_detected -> fatigue_detected;
-	c2 : port thr_acq.pedestrian_detected -> pedestrian_detected;
+	c1 : port thr_acq.fatigue_detected -> fatigue_detected_image;
+	c2 : port thr_acq.pedestrian_detected -> pedestrian_detected_image;
 flows
-	f0 : flow path picture -> c0 -> thr_acq.f0 -> c1 -> fatigue_detected;
-	f1 : flow path picture -> c0 -> thr_acq.f0 -> c2 -> pedestrian_detected;
+	f0 : flow path picture -> c0 -> thr_acq.f0 -> c1 -> fatigue_detected_image;
+	f1 : flow path picture -> c0 -> thr_acq.f0 -> c2 -> pedestrian_detected_image;
 end image_acquisition.i;
 
 thread image_acquisition_thr
@@ -170,26 +170,27 @@ end speed_estimate_thr.i;
 process fatigue_detection
 features
 	camera : in data port speed_regulation::icd::boolean;
-	radar : in data port speed_regulation::icd::boolean;
 	fatigue_detected : out data port speed_regulation::icd::boolean;
+	blink_rate_per_minute : out data port speed_regulation::icd::blink_rate_per_minute;
 flows
 	f0 : flow path camera -> fatigue_detected;
-	f1 : flow path radar -> fatigue_detected;
+	f1 : flow path camera -> blink_rate_per_minute;
 annex EMV2 {**
 	use types 		speed_regulation::error_library;
 	use behavior  	speed_regulation::error_library::simple;
 
 	error propagations
 		camera : in propagation {NoValue,InvalidValue};
---		radar : in propagation {NoValue,InvalidValue};
 		fatigue_detected : out propagation {NoValue,InvalidValue};
+		blink_rate_per_minute : out propagation {NoValue,InvalidValue};
 		processor : in propagation {SoftwareFailure, HardwareFailure};
 	flows
 		ef0 : error path camera{NoValue} -> fatigue_detected{NoValue};
-		ef1 : error path camera{NoValue} -> fatigue_detected{InvalidValue};
-		ef2 : error path processor{HardwareFailure} -> fatigue_detected{NoValue};
-		ef3 : error path camera{InvalidValue} -> fatigue_detected{InvalidValue};
-		ef4 : error path processor{SoftwareFailure} -> fatigue_detected{NoValue};
+		ef1 : error path camera{InvalidValue} -> fatigue_detected{InvalidValue};
+		ef2 : error path camera{NoValue} -> blink_rate_per_minute{NoValue};
+        ef3 : error path camera{InvalidValue} -> blink_rate_per_minute{InvalidValue};
+		ef4 : error path processor{HardwareFailure} -> fatigue_detected{NoValue};
+		ef5 : error path processor{SoftwareFailure} -> fatigue_detected{NoValue};
 
 	end propagations;
 

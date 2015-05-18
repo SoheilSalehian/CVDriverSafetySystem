@@ -25,21 +25,27 @@ with speed_regulation::platform;
 process image_acquisition
 features
 	picture           : in data port speed_regulation::icd::picture;
-	obstacle_detected : out data port speed_regulation::icd::boolean;
+	fatigue_detected : out data port speed_regulation::icd::boolean;
+	pedestrian_detected : out data port speed_regulation::icd::boolean;
 flows
-	f0 : flow path picture -> obstacle_detected;
+	f0 : flow path picture -> fatigue_detected;
+	f1 : flow path picture -> pedestrian_detected;
 annex EMV2 {**
 	use types 		speed_regulation::error_library;
 	use behavior  	speed_regulation::error_library::simple;
 
 	error propagations
 		picture : in propagation {NoValue};
-		obstacle_detected : out propagation {NoValue,InvalidValue};
+		fatigue_detected : out propagation {NoValue,InvalidValue};
+		pedestrian_detected : out propagation {NoValue,InvalidValue};
 		processor : in propagation {SoftwareFailure, HardwareFailure};
 	flows
 		ef0 : error path picture{NoValue} -> obstacle_detected{NoValue};
 		ef1 : error path picture{NoValue} -> obstacle_detected{InvalidValue};
-		ef2 : error path processor{HardwareFailure,SoftwareFailure} -> obstacle_detected{NoValue};
+		ef2 : error path picture{NoValue} -> pedestrian_detected{NoValue};
+        ef3 : error path picture{NoValue} -> pedestrian_detected{InvalidValue};
+		ef4 : error path processor{HardwareFailure,SoftwareFailure} -> fatigue_detected{NoValue};
+		ef5 : error path processor{HardwareFailure,SoftwareFailure} -> pedestrian_detected{NoValue};
 	end propagations;
 
 	component error behavior
@@ -48,7 +54,8 @@ annex EMV2 {**
 		t1 : Operational -[processor{HardwareFailure}]-> Failed;
 		t2 : Failed -[processor{NoError}]-> Operational;
 	propagations
-	   	p1 : Failed -[]-> obstacle_detected{NoValue};
+	   	p1 : Failed -[]-> fatigue_detected{NoValue};
+	   	p2 : Failed -[]-> pedestrian_detected{NoValue};
 	end component;
 **};
 end image_acquisition;
@@ -58,17 +65,23 @@ subcomponents
 	thr_acq : thread image_acquisition_thr.i;
 connections
 	c0 : port picture -> thr_acq.picture;
-	c1 : port thr_acq.obstacle_detected -> obstacle_detected;
+	c1 : port thr_acq.obstacle_detected -> fatigue_detected;
+	c2 : port thr_acq.obstacle_detected -> pedestrian_detected;
 flows
-	f0 : flow path picture -> c0 -> thr_acq.f0 -> c1 -> obstacle_detected;
+	f0 : flow path picture -> c0 -> thr_acq.f0 -> c1 -> fatigue_detected;
+	f1 : flow path picture -> c0 -> thr_acq.f0 -> c2 -> pedestrian_detected;
 end image_acquisition.i;
 
 thread image_acquisition_thr
 features
 	picture           : in data port speed_regulation::icd::picture;
-	obstacle_detected : out data port speed_regulation::icd::boolean;
+	fatigue_detected : out data port speed_regulation::icd::boolean;
+	pedestrian_detected : out data port speed_regulation::icd::boolean;
 flows
-	f0 : flow path picture -> obstacle_detected;
+	f0 : flow path picture -> fatigue_detected;
+	f0 : flow path picture -> pedestrian_detected;
+	
+	--TODO: change image aquisition properties
 properties
 	sei::mipsbudget   => 25.0 MIPS;
 	Dispatch_Protocol => Periodic;
@@ -80,67 +93,6 @@ end image_acquisition_thr;
 
 thread implementation image_acquisition_thr.i
 end image_acquisition_thr.i;
-
--------------------------
---  Radar Acquisition  --
--------------------------
-
-process radar_acquisition
-features
-	obstacle_distance : in data port speed_regulation::icd::distance;
-	obstacle_detected : out data port speed_regulation::icd::boolean;
-flows
-	f0 : flow path obstacle_distance -> obstacle_detected;
-annex EMV2 {**
-	use types 		speed_regulation::error_library;
-	use behavior  	speed_regulation::error_library::simple;
-
-	error propagations
-		obstacle_distance : in propagation {NoValue,InvalidValue};
-		obstacle_detected : out propagation {NoValue,InvalidValue};
-		processor : in propagation {SoftwareFailure, HardwareFailure};
-	flows
-		ef0 : error path obstacle_distance{NoValue} -> obstacle_detected{NoValue};
-		ef1 : error path obstacle_distance{NoValue} -> obstacle_detected{InvalidValue};
-		ef3 : error path obstacle_distance{InvalidValue} -> obstacle_detected{InvalidValue};
-		ef2 : error path processor{HardwareFailure,SoftwareFailure} -> obstacle_detected{NoValue};
-	end propagations;
-
-	component error behavior
-	transitions
-		t0 : Operational -[processor{SoftwareFailure}]-> Failed;
-		t1 : Operational -[processor{HardwareFailure}]-> Failed;
-		t2 : Failed -[processor{NoError}]-> Operational;
-	propagations
-	   	p1 : Failed -[]-> obstacle_detected{NoValue};
-	end component;
-**};
-end radar_acquisition;
-
-process implementation radar_acquisition.i
-subcomponents
-	thr : thread radar_acquisition_thr.i;
-connections
-	c0 : port obstacle_distance -> thr.obstacle_distance;
-	c1 : port thr.obstacle_detected -> obstacle_detected;
-flows
-	f0 : flow path obstacle_distance -> c0 -> thr.f0 -> c1 -> obstacle_detected;
-end radar_acquisition.i;
-
-thread radar_acquisition_thr
-features
-	obstacle_distance : in data port speed_regulation::icd::distance;
-	obstacle_detected : out data port speed_regulation::icd::boolean;
-flows
-	f0 : flow path obstacle_distance -> obstacle_detected;
-properties
-	Dispatch_Protocol => Periodic;
-	Period            => 10ms;
-	sei::mipsbudget   => 4.0 MIPS;
-end radar_acquisition_thr;
-
-thread implementation radar_acquisition_thr.i
-end radar_acquisition_thr.i;
 
 ----------------------
 --  Speed Estimate  --
@@ -212,35 +164,32 @@ thread implementation speed_estimate_thr.i
 end speed_estimate_thr.i;
 
 --------------------------
---  Obstacle Detection  --
+--  Fatigue Detection  --
 --------------------------
 
-process obstacle_detection
+process fatigue_detection
 features
 	camera : in data port speed_regulation::icd::boolean;
 	radar : in data port speed_regulation::icd::boolean;
-	obstacle_detected : out data port speed_regulation::icd::boolean;
+	fatigue_detected : out data port speed_regulation::icd::boolean;
 flows
-	f0 : flow path camera -> obstacle_detected;
-	f1 : flow path radar -> obstacle_detected;
+	f0 : flow path camera -> fatigue_detected;
+	f1 : flow path radar -> fatigue_detected;
 annex EMV2 {**
 	use types 		speed_regulation::error_library;
 	use behavior  	speed_regulation::error_library::simple;
 
 	error propagations
 		camera : in propagation {NoValue,InvalidValue};
-		radar : in propagation {NoValue,InvalidValue};
-		obstacle_detected : out propagation {NoValue,InvalidValue};
+--		radar : in propagation {NoValue,InvalidValue};
+		fatigue_detected : out propagation {NoValue,InvalidValue};
 		processor : in propagation {SoftwareFailure, HardwareFailure};
 	flows
-		ef0 : error path camera{NoValue} -> obstacle_detected{NoValue};
-		ef1 : error path radar{NoValue} -> obstacle_detected{NoValue};
-		ef2 : error path camera{NoValue} -> obstacle_detected{InvalidValue};
-		ef3 : error path radar{NoValue} -> obstacle_detected{InvalidValue};
-		ef4 : error path processor{HardwareFailure} -> obstacle_detected{NoValue};
-		ef5 : error path camera{InvalidValue} -> obstacle_detected{InvalidValue};
-		ef6 : error path radar{InvalidValue} -> obstacle_detected{InvalidValue};
-		ef7 : error path processor{SoftwareFailure} -> obstacle_detected{NoValue};
+		ef0 : error path camera{NoValue} -> fatigue_detected{NoValue};
+		ef1 : error path camera{NoValue} -> fatigue_detected{InvalidValue};
+		ef2 : error path processor{HardwareFailure} -> fatigue_detected{NoValue};
+		ef3 : error path camera{InvalidValue} -> fatigue_detected{InvalidValue};
+		ef4 : error path processor{SoftwareFailure} -> fatigue_detected{NoValue};
 
 	end propagations;
 
@@ -250,31 +199,27 @@ annex EMV2 {**
 		t1 : Operational -[processor{HardwareFailure}]-> Failed;
 		t2 : Failed -[processor{NoError}]-> Operational;
 	propagations
-	   	p1 : Failed -[]-> obstacle_detected{NoValue};
+	   	p1 : Failed -[]-> fatigue_detected{NoValue};
 	end component;
 **};
-end obstacle_detection;
+end fatigue_detection;
 
-process implementation obstacle_detection.i
+process implementation fatigue_detection.i
 subcomponents
-	thr : thread obstacle_detection_thr;
+	thr : thread fatigue_detection_thr;
 connections
 	c0 : port camera -> thr.camera;
-	c1 : port radar -> thr.radar;
-	c2 : port thr.obstacle_detected -> obstacle_detected;
+	c1 : port thr.fatigue_detected -> fatigue_detected;
 flows
-	f0 : flow path camera -> c0 -> thr.f0 -> c2 -> obstacle_detected;
-	f1 : flow path radar -> c1 -> thr.f1 -> c2 -> obstacle_detected;
-end obstacle_detection.i;
+	f0 : flow path camera -> c0 -> thr.f0 -> c2 -> fatigue_detected;
+end fatigue_detection.i;
 
-thread obstacle_detection_thr
+thread fatigue_detection_thr
 features
 	camera : in data port speed_regulation::icd::boolean;
-	radar : in data port speed_regulation::icd::boolean;
-	obstacle_detected : out data port speed_regulation::icd::boolean;
+	fatigue_detected : out data port speed_regulation::icd::boolean;
 flows
-	f0 : flow path camera -> obstacle_detected;
-	f1 : flow path radar -> obstacle_detected;
+	f0 : flow path camera -> fatigue_detected;
 properties
 	Dispatch_Protocol => Periodic;
 	Period            => 100ms;
@@ -282,73 +227,72 @@ properties
 	sei::mipsbudget   => 10.0 MIPS; 
 	sei::instructionsperdispatch => 0.9 kipd .. 0.98 mipd; 
 	reference_processor => classifier (speed_regulation::platform::ecu);
-end obstacle_detection_thr;
+end fatigue_detection_thr;
 
-------------------------------------
---  Obstacle Distance Evaluation  --
-------------------------------------
+--------------------------
+--  Pedestrian Detection  --
+--------------------------
 
-process obstacle_distance_evaluation
+process pedestrian_detection
 features
-	current_speed : in data port speed_regulation::icd::speed;
-	obstacle_detected : in data port speed_regulation::icd::boolean;
-	obstacle_distance : out data port speed_regulation::icd::distance;
+    camera : in data port speed_regulation::icd::boolean;
+    pedestrian_detected : out data port speed_regulation::icd::boolean;
 flows
-	f0 : flow path current_speed -> obstacle_distance;
-	f1 : flow path obstacle_detected -> obstacle_distance;
+    f0 : flow path camera -> pedestrian_detected;
+    f1 : flow path radar -> pedestrian_detected;
 annex EMV2 {**
-	use types 		speed_regulation::error_library;
-	use behavior  	speed_regulation::error_library::simple;
+    use types       speed_regulation::error_library;
+    use behavior    speed_regulation::error_library::simple;
 
-	error propagations
-		current_speed : in propagation {NoValue,InvalidValue};
-		obstacle_detected : in propagation {NoValue,InvalidValue};
-		obstacle_distance : out propagation {NoValue,InvalidValue};
-		processor : in propagation {SoftwareFailure, HardwareFailure};
-	flows
-		ef0 : error path current_speed{NoValue} -> obstacle_distance{NoValue};
-		ef1 : error path obstacle_detected{NoValue} -> obstacle_distance{NoValue};
-		ef2 : error path current_speed{InvalidValue} -> obstacle_distance{InvalidValue};
-		ef3 : error path obstacle_detected{InvalidValue} -> obstacle_distance{InvalidValue};
-		ef4 : error path processor{HardwareFailure,SoftwareFailure} -> obstacle_distance{NoValue};
-	end propagations;
+    error propagations
+        camera : in propagation {NoValue,InvalidValue};
+--      radar : in propagation {NoValue,InvalidValue};
+        pedestrian_detected : out propagation {NoValue,InvalidValue};
+        processor : in propagation {SoftwareFailure, HardwareFailure};
+    flows
+        ef0 : error path camera{NoValue} -> pedestrian_detected{NoValue};
+        ef1 : error path camera{NoValue} -> pedestrian_detected{InvalidValue};
+        ef2 : error path processor{HardwareFailure} -> pedestrian_detected{NoValue};
+        ef3 : error path camera{InvalidValue} -> pedestrian_detected{InvalidValue};
+        ef4 : error path processor{SoftwareFailure} -> pedestrian_detected{NoValue};
 
-	component error behavior
-	transitions
-		t0 : Operational -[processor{SoftwareFailure}]-> Failed;
-		t1 : Operational -[processor{HardwareFailure}]-> Failed;
-		t2 : Failed -[processor{NoError}]-> Operational;
-	propagations
-	   	p1 : Failed -[]-> obstacle_distance{NoValue};
-	end component;
+    end propagations;
+
+    component error behavior
+    transitions
+        t0 : Operational -[processor{SoftwareFailure}]-> Failed;
+        t1 : Operational -[processor{HardwareFailure}]-> Failed;
+        t2 : Failed -[processor{NoError}]-> Operational;
+    propagations
+        p1 : Failed -[]-> pedestrian_detected{NoValue};
+    end component;
 **};
-end obstacle_distance_evaluation;
+end pedestrian_detection;
 
-process implementation obstacle_distance_evaluation.i
+process implementation pedestrian_detection.i
 subcomponents
-	thr : thread obstacle_distance_evaluation_thr;
+    thr : thread pedestrian_detection_thr;
 connections
-	c0 : port current_speed -> thr.current_speed;
-	c1 : port obstacle_detected -> thr.obstacle_detected;
-	c2 : port thr.obstacle_distance -> obstacle_distance;
+    c0 : port camera -> thr.camera;
+    c1 : port thr.pedestrian_detected -> pedestrian_detected;
 flows
-	f0 : flow path current_speed -> c0 -> thr.f0 -> c2 -> obstacle_distance;
-	f1 : flow path obstacle_detected -> c1 -> thr.f1 -> c2 -> obstacle_distance;
-end obstacle_distance_evaluation.i;
+    f0 : flow path camera -> c0 -> thr.f0 -> c2 -> pedestrian_detected;
+end pedestrian_detection.i;
 
-thread obstacle_distance_evaluation_thr
+thread pedestrian_detection_thr
 features
-	current_speed : in data port speed_regulation::icd::speed;
-	obstacle_detected : in data port speed_regulation::icd::boolean;
-	obstacle_distance : out data port speed_regulation::icd::distance;
+    camera : in data port speed_regulation::icd::boolean;
+    pedestrian_detected : out data port speed_regulation::icd::boolean;
 flows
-	f0 : flow path current_speed -> obstacle_distance;
-	f1 : flow path obstacle_detected -> obstacle_distance;
+    f0 : flow path camera -> pedestrian_detected;
 properties
-	Dispatch_Protocol => Periodic;
-	Period            => 10ms;
-	sei::mipsbudget   => 8.0 MIPS;
-end obstacle_distance_evaluation_thr;
+    Dispatch_Protocol => Periodic;
+    Period            => 100ms;
+    Compute_Execution_Time => 20 ms .. 50 ms; 
+    sei::mipsbudget   => 10.0 MIPS; 
+    sei::instructionsperdispatch => 0.9 kipd .. 0.98 mipd; 
+    reference_processor => classifier (speed_regulation::platform::ecu);
+end pedestrian_detection_thr;
 
 ---------------------------
 --  Emergency Detection  --

@@ -359,7 +359,7 @@ end emergency_detection.i;
 thread emergency_detection_thr
 features
 	current_speed : in data port speed_regulation::icd::speed;
-	proximate_pedestrian : in data port speed_regulation::icd::distance;
+	proximate_pedestrian : in data port speed_regulation::icd::boolean;
 	emergency_detected : out data port speed_regulation::icd::boolean;
 flows
 	f0 : flow path current_speed -> emergency_detected;
@@ -437,6 +437,8 @@ features
 	position1 : in data port speed_regulation::icd::gps_position;
 	position2 : in data port speed_regulation::icd::gps_position;
 	position  : out data port speed_regulation::icd::gps_position;
+	speed : in data port speed_regulation::icd::speed;
+	speed_logged : out data port speed_regulation::icd::speed;  
 	blink_rate_per_minute : in data port speed_regulation::icd::blink_rate_per_minute;
 	blink_rate_logged : out data port speed_regulation::icd::blink_rate_per_minute;
 	total_proximate_pedestrians : in data port speed_regulation::icd::total_proximate_pedestrians;
@@ -446,6 +448,7 @@ flows
 	f1 : flow path position2 -> position;
 	f2 : flow path blink_rate_per_minute -> blink_rate_logged;
 	f3 : flow path total_proximate_pedestrians -> total_pedestrians_logged;
+	f4 : flow path speed -> speed_logged;
 annex EMV2 {**
 	use types 		speed_regulation::error_library;
 	use behavior  	speed_regulation::error_library::simple;
@@ -458,17 +461,21 @@ annex EMV2 {**
 		blink_rate_logged : out propagation {NoValue,InvalidValue};
 		total_proximate_pedestrians : in propagation {NoValue,InvalidValue};
         total_pedestrians_logged : out propagation {NoValue,InvalidValue};
+        speed : in propagation {NoValue,InvalidValue};
+        speed_logged : out propagation {NoValue,InvalidValue};
 		processor : in propagation {SoftwareFailure, HardwareFailure};
 	flows
-		ef00 : error path position1{novalue} -> position{novalue};
-		ef01 : error path position1{invalidvalue} -> position{invalidvalue};
-		ef10 : error path position2{novalue} -> position{novalue};
-		ef11 : error path position2{invalidvalue} -> position{invalidvalue};
-		ef4 : error path processor{HardwareFailure,SoftwareFailure} -> position{NoValue};
-		ef5 : error path blink_rate_per_minute{novalue} -> blink_rate_logged{novalue};
-		ef6 : error path blink_rate_per_minute{invalidvalue} -> blink_rate_logged{invalidvalue};
-		ef7 : error path total_proximate_pedestrians{novalue} -> total_pedestrians_logged{novalue};
-        ef8 : error path total_proximate_pedestrians{invalidvalue} -> total_pedestrians_logged{invalidvalue};
+		ef000 : error path position1{novalue} -> position{novalue};
+		ef001 : error path position1{invalidvalue} -> position{invalidvalue};
+		ef002 : error path position2{novalue} -> position{novalue};
+		ef003 : error path position2{invalidvalue} -> position{invalidvalue};
+		ef004 : error path processor{HardwareFailure,SoftwareFailure} -> position{NoValue};
+		ef005 : error path blink_rate_per_minute{novalue} -> blink_rate_logged{novalue};
+		ef006 : error path blink_rate_per_minute{invalidvalue} -> blink_rate_logged{invalidvalue};
+		ef007 : error path total_proximate_pedestrians{novalue} -> total_pedestrians_logged{novalue};
+        ef008 : error path total_proximate_pedestrians{invalidvalue} -> total_pedestrians_logged{invalidvalue};
+        ef009 : error path speed{novalue} -> speed_logged{novalue};
+        ef010 : error path speed{invalidvalue} -> speed_logged{invalidvalue};
 	end propagations;
 
 	component error behavior
@@ -491,10 +498,16 @@ connections
 	c2 : port thr.position -> position;
 	c3 : port blink_rate_per_minute -> thr.blink_rate_per_minute;
 	c4 : port thr.blink_rate_logged -> blink_rate_logged;
+	c5 : port speed -> thr.speed;
+	c6 : port thr.speed_logged -> speed_logged;
+	c7 : port total_proximate_pedestrians -> thr.total_proximate_pedestrians;
+    c8 : port thr.total_pedestrians_logged -> total_pedestrians_logged;
 flows
 	f0 : flow path position1 -> c0 -> thr.f0 -> c2 -> position;
 	f1 : flow path position2 -> c1 -> thr.f1 -> c2 -> position;
 	f2 : flow path blink_rate_per_minute -> c3 -> thr.f2 -> c4 -> blink_rate_logged;
+	f3 : flow path total_proximate_pedestrians -> c7 -> thr.f3 -> c8 -> total_pedestrians_logged; 
+	f4 : flow path speed -> c5 -> thr.f4 -> c6 -> speed_logged; 
 end position_voter.i;
 
 thread logger_thr
@@ -504,10 +517,16 @@ features
 	position  : out data port speed_regulation::icd::gps_position;
 	blink_rate_per_minute : in data port speed_regulation::icd::blink_rate_per_minute;
     blink_rate_logged : out data port speed_regulation::icd::blink_rate_per_minute;
+    speed : in data port speed_regulation::icd::speed;
+    speed_logged : out data port speed_regulation::icd::speed;
+    total_proximate_pedestrians : in data port speed_regulation::icd::total_proximate_pedestrians;
+    total_pedestrians_logged : out data port speed_regulation::icd::total_proximate_pedestrians;
 flows
 	f0 : flow path position1 -> position;
 	f1 : flow path position2 -> position;
 	f2 : flow path blink_rate_per_minute -> blink_rate_logged;
+	f3 : flow path total_proximate_pedestrians -> total_pedestrians_logged;
+	f4 : flow path speed -> speed_logged;
 properties
 	Dispatch_Protocol => Periodic;
 	Period            => 12ms;

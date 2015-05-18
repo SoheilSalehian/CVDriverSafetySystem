@@ -40,8 +40,8 @@ annex EMV2 {**
 		pedestrian_detected : out propagation {NoValue,InvalidValue};
 		processor : in propagation {SoftwareFailure, HardwareFailure};
 	flows
-		ef0 : error path picture{NoValue} -> obstacle_detected{NoValue};
-		ef1 : error path picture{NoValue} -> obstacle_detected{InvalidValue};
+		ef0 : error path picture{NoValue} -> fatigue_detected{NoValue};
+		ef1 : error path picture{NoValue} -> fatigue_detected{InvalidValue};
 		ef2 : error path picture{NoValue} -> pedestrian_detected{NoValue};
         ef3 : error path picture{NoValue} -> pedestrian_detected{InvalidValue};
 		ef4 : error path processor{HardwareFailure,SoftwareFailure} -> fatigue_detected{NoValue};
@@ -65,8 +65,8 @@ subcomponents
 	thr_acq : thread image_acquisition_thr.i;
 connections
 	c0 : port picture -> thr_acq.picture;
-	c1 : port thr_acq.obstacle_detected -> fatigue_detected;
-	c2 : port thr_acq.obstacle_detected -> pedestrian_detected;
+	c1 : port thr_acq.fatigue_detected -> fatigue_detected;
+	c2 : port thr_acq.pedestrian_detected -> pedestrian_detected;
 flows
 	f0 : flow path picture -> c0 -> thr_acq.f0 -> c1 -> fatigue_detected;
 	f1 : flow path picture -> c0 -> thr_acq.f0 -> c2 -> pedestrian_detected;
@@ -79,7 +79,7 @@ features
 	pedestrian_detected : out data port speed_regulation::icd::boolean;
 flows
 	f0 : flow path picture -> fatigue_detected;
-	f0 : flow path picture -> pedestrian_detected;
+	f1 : flow path picture -> pedestrian_detected;
 	
 	--TODO: change image aquisition properties
 properties
@@ -211,7 +211,7 @@ connections
 	c0 : port camera -> thr.camera;
 	c1 : port thr.fatigue_detected -> fatigue_detected;
 flows
-	f0 : flow path camera -> c0 -> thr.f0 -> c2 -> fatigue_detected;
+	f0 : flow path camera -> c0 -> thr.f0 -> c1 -> fatigue_detected;
 end fatigue_detection.i;
 
 thread fatigue_detection_thr
@@ -239,7 +239,6 @@ features
     pedestrian_detected : out data port speed_regulation::icd::boolean;
 flows
     f0 : flow path camera -> pedestrian_detected;
-    f1 : flow path radar -> pedestrian_detected;
 annex EMV2 {**
     use types       speed_regulation::error_library;
     use behavior    speed_regulation::error_library::simple;
@@ -276,7 +275,7 @@ connections
     c0 : port camera -> thr.camera;
     c1 : port thr.pedestrian_detected -> pedestrian_detected;
 flows
-    f0 : flow path camera -> c0 -> thr.f0 -> c2 -> pedestrian_detected;
+    f0 : flow path camera -> c0 -> thr.f0 -> c1 -> pedestrian_detected;
 end pedestrian_detection.i;
 
 thread pedestrian_detection_thr

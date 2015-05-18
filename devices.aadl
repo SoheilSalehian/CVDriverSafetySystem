@@ -500,33 +500,4 @@ annex EMV2 {**
 **};
 end brake;
 
-device acceleration
-features
-	cmd : in data port speed_regulation::icd::speed_command.i;
-flows
-	f0 : flow sink cmd;
-properties
-	Period => 2ms;
-annex EMV2 {**
-	use types speed_regulation::error_library;
-	use behavior  	speed_regulation::error_library::simple;
-
-	error propagations
-		cmd : in propagation {NoValue,InvalidValue};
-	flows
-		ef0 : error sink cmd{NoValue,InvalidValue};
-	end propagations;
-	
-	
-	component error behavior
-	events
-		Reset : recover event;
-	transitions
-		t0 : Operational -[cmd{NoValue}]-> Failed;
-		t1 : Operational -[cmd{InvalidValue}]-> Failed;
-		t2 : Failed -[Reset]-> Operational;
-	end component;
-**};
-end acceleration;
-
 end speed_regulation::devices;
